@@ -20,19 +20,19 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 usage() {
-  cat <<'EOF'
+  cat <<'EOF_USAGE'
 Użycie:
   ./start.sh install
-  ./start.sh download [MODEL_ID] [OUTPUT_DIR]
-  ./start.sh run [ARGUMENTY_DLA_PYTHONA...]
-  ./start.sh [ARGUMENTY_DLA_PYTHONA...]
+  ./start.sh download [MODEL_ID]
+  ./start.sh run
+  ./start.sh
 
 Opis:
   install  - tworzy .venv i instaluje zależności z requirements.txt
   download - pobiera model przez ollama pull (przez download_required_files.sh)
   run      - uruchamia test_translategemma_4b.py przez .venv
-  bez komendy - też uruchamia test_translategemma_4b.py przez .venv
-EOF
+  bez komendy - to samo co run
+EOF_USAGE
 }
 
 command="${1:-run}"
@@ -48,15 +48,15 @@ case "${command}" in
     "${DOWNLOAD_SCRIPT}" "${@}"
     ;;
   run)
-    shift || true
     ensure_venv
-    "${VENV_PYTHON}" "${SCRIPT_PATH}" "${@}"
+    "${VENV_PYTHON}" "${SCRIPT_PATH}"
     ;;
   -h|--help|help)
     usage
     ;;
   *)
-    ensure_venv
-    "${VENV_PYTHON}" "${SCRIPT_PATH}" "${@}"
+    echo "Nieznana komenda: ${command}" >&2
+    usage
+    exit 1
     ;;
 esac

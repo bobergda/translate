@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Prosty test tłumaczenia przez Ollama (tekst -> tekst)."""
 
-import argparse
 import json
 import os
 import socket
@@ -9,67 +8,56 @@ import sys
 import urllib.error
 import urllib.request
 
-
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simple Ollama translation test")
-    parser.add_argument("--text", default="To jest prosty test tłumaczenia.", help="Tekst do przetłumaczenia")
-    parser.add_argument("--source", default="pl", help="Kod języka źródłowego, np. pl")
-    parser.add_argument("--target", default="en", help="Kod języka docelowego, np. en lub de-DE")
-    parser.add_argument("--model", default="translategemma:4b", help="Model Ollama, np. translategemma:4b")
-    parser.add_argument("--max-new-tokens", type=int, default=128, help="Maksymalna liczba nowych tokenów")
-    parser.add_argument(
-        "--host",
-        default=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
-        help="Adres serwera Ollama, np. http://127.0.0.1:11434",
-    )
-    parser.add_argument("--timeout", type=int, default=120, help="Timeout zapytania HTTP w sekundach")
-    return parser.parse_args()
+# Konfiguracja w kodzie (bez parametrów CLI).
+TEXT_TO_TRANSLATE = "Kamilek chcial byc programista, ale nie mial talentu do kodowania. Zamiast tego, zostal mistrzem kamieniarskim i tworzy przepiekne rzezby z kamienia."
+SOURCE_LANG = "pl"
+TARGET_LANG = "en"
+MODEL = "translategemma:4b"
+MAX_NEW_TOKENS = 128
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+TIMEOUT_SECONDS = 120
 
 
-def _build_prompt(source: str, target: str, text: str) -> str:
-    return (
-        f"Przetłumacz poniższy tekst z języka '{source}' na '{target}'. "
-        "Zwróć wyłącznie tłumaczenie, bez komentarzy i dodatkowych wyjaśnień.\n\n"
-        f"Tekst:\n{text}"
-    )
-
-
-def _call_ollama(host: str, payload: dict, timeout: int) -> dict:
-    url = f"{host.rstrip('/')}/api/chat"
+def _call_ollama(payload: dict) -> dict:
+    url = f"{OLLAMA_HOST.rstrip('/')}/api/chat"
     request = urllib.request.Request(
         url=url,
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
 def main() -> int:
-    args = _parse_args()
-
+    temperature = 0.5  # Ustawienie kreatywności (0.5 to 50% kreatywności)
     payload = {
-        "model": args.model,
+        "model": MODEL,
         "stream": False,
         "messages": [
             {
                 "role": "system",
-                "content": "Jesteś profesjonalnym tłumaczem. Odpowiadaj samym tłumaczeniem.",
+                "content": (
+                    "You are a professional translator. "
+                    f"Translate from {SOURCE_LANG} to {TARGET_LANG}."
+                ),
             },
             {
                 "role": "user",
-                "content": _build_prompt(args.source, args.target, args.text),
+                "content": TEXT_TO_TRANSLATE,
             },
         ],
         "options": {
-            "temperature": 0,
-            "num_predict": args.max_new_tokens,
+            "temperature": temperature,
+            "num_predict": MAX_NEW_TOKENS,
         },
     }
 
     try:
-        data = _call_ollama(args.host, payload, args.timeout)
+        print(f"Wysyłanie zapytania do Ollama (model: {MODEL}), tłumaczenie z {SOURCE_LANG} na {TARGET_LANG} temp: {temperature}...")
+        print(f"{TEXT_TO_TRANSLATE}")
+        data = _call_ollama(payload)
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace").strip()
         print(f"Błąd HTTP z Ollama API: {exc.code}", file=sys.stderr)
@@ -77,12 +65,12 @@ def main() -> int:
             print(f"Szczegóły: {details}", file=sys.stderr)
         if exc.code == 404:
             print(
-                f"Model '{args.model}' nie został znaleziony. Uruchom: ./start.sh download {args.model}",
+                f"Model '{MODEL}' nie został znaleziony. Uruchom: ./start.sh download {MODEL}",
                 file=sys.stderr,
             )
         return 1
     except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
-        print(f"Nie można połączyć się z Ollama pod adresem {args.host}: {exc}", file=sys.stderr)
+        print(f"Nie można połączyć się z Ollama pod adresem {OLLAMA_HOST}: {exc}", file=sys.stderr)
         print("Sprawdź, czy działa `ollama serve` i czy host jest poprawny.", file=sys.stderr)
         return 1
     except json.JSONDecodeError as exc:
@@ -94,7 +82,9 @@ def main() -> int:
         print("Ollama zwróciła pustą odpowiedź.", file=sys.stderr)
         print(f"Pełna odpowiedź: {json.dumps(data, ensure_ascii=False)}", file=sys.stderr)
         return 1
-
+    
+    print()
+    print("===  Odpowiedź Ollama  ===")
     print(translated)
     return 0
 
