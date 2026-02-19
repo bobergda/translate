@@ -1,96 +1,100 @@
 #!/usr/bin/env python3
-"""Prosty test modelu TranslateGemma 4B (tekst -> tekst)."""
+"""Prosty test tłumaczenia przez Ollama (tekst -> tekst)."""
 
 import argparse
+import json
 import os
+import socket
 import sys
-
-import torch
-from transformers import AutoModelForImageTextToText, AutoProcessor
+import urllib.error
+import urllib.request
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simple TranslateGemma 4B translation test")
+    parser = argparse.ArgumentParser(description="Simple Ollama translation test")
     parser.add_argument("--text", default="To jest prosty test tłumaczenia.", help="Tekst do przetłumaczenia")
     parser.add_argument("--source", default="pl", help="Kod języka źródłowego, np. pl")
     parser.add_argument("--target", default="en", help="Kod języka docelowego, np. en lub de-DE")
-    parser.add_argument("--model", default="google/translategemma-4b-it", help="Model Hugging Face")
+    parser.add_argument("--model", default="translategemma:4b", help="Model Ollama, np. translategemma:4b")
     parser.add_argument("--max-new-tokens", type=int, default=128, help="Maksymalna liczba nowych tokenów")
+    parser.add_argument(
+        "--host",
+        default=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
+        help="Adres serwera Ollama, np. http://127.0.0.1:11434",
+    )
+    parser.add_argument("--timeout", type=int, default=120, help="Timeout zapytania HTTP w sekundach")
     return parser.parse_args()
 
 
-def _move_inputs_to_device(inputs, device: torch.device, float_dtype: torch.dtype):
-    moved = {}
-    for key, value in inputs.items():
-        if torch.is_floating_point(value):
-            moved[key] = value.to(device=device, dtype=float_dtype)
-        else:
-            moved[key] = value.to(device=device)
-    return moved
+def _build_prompt(source: str, target: str, text: str) -> str:
+    return (
+        f"Przetłumacz poniższy tekst z języka '{source}' na '{target}'. "
+        "Zwróć wyłącznie tłumaczenie, bez komentarzy i dodatkowych wyjaśnień.\n\n"
+        f"Tekst:\n{text}"
+    )
+
+
+def _call_ollama(host: str, payload: dict, timeout: int) -> dict:
+    url = f"{host.rstrip('/')}/api/chat"
+    request = urllib.request.Request(
+        url=url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def main() -> int:
     args = _parse_args()
-    hf_token = os.getenv("HF_TOKEN")
 
-    if not torch.cuda.is_available():
-        print("Uwaga: brak CUDA. Model 4B może działać bardzo wolno albo nie zmieścić się w RAM.", file=sys.stderr)
-
-    model_kwargs = {"device_map": "auto"}
-    if torch.cuda.is_available():
-        model_kwargs["torch_dtype"] = torch.bfloat16
-
-    try:
-        processor = AutoProcessor.from_pretrained(args.model, token=hf_token)
-        model = AutoModelForImageTextToText.from_pretrained(args.model, token=hf_token, **model_kwargs)
-    except Exception as exc:
-        print("Nie udało się załadować modelu.", file=sys.stderr)
-        print(
-            "Sprawdź, czy zaakceptowano licencję modelu na Hugging Face i czy masz poprawny HF_TOKEN.",
-            file=sys.stderr,
-        )
-        print(f"Szczegóły: {exc}", file=sys.stderr)
-        return 1
-
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "source_lang_code": args.source,
-                    "target_lang_code": args.target,
-                    "text": args.text,
-                }
-            ],
-        }
-    ]
+    payload = {
+        "model": args.model,
+        "stream": False,
+        "messages": [
+            {
+                "role": "system",
+                "content": "Jesteś profesjonalnym tłumaczem. Odpowiadaj samym tłumaczeniem.",
+            },
+            {
+                "role": "user",
+                "content": _build_prompt(args.source, args.target, args.text),
+            },
+        ],
+        "options": {
+            "temperature": 0,
+            "num_predict": args.max_new_tokens,
+        },
+    }
 
     try:
-        inputs = processor.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_dict=True,
-            return_tensors="pt",
-        )
-    except Exception as exc:
-        print(f"Błąd podczas budowania promptu: {exc}", file=sys.stderr)
+        data = _call_ollama(args.host, payload, args.timeout)
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace").strip()
+        print(f"Błąd HTTP z Ollama API: {exc.code}", file=sys.stderr)
+        if details:
+            print(f"Szczegóły: {details}", file=sys.stderr)
+        if exc.code == 404:
+            print(
+                f"Model '{args.model}' nie został znaleziony. Uruchom: ./start.sh download {args.model}",
+                file=sys.stderr,
+            )
+        return 1
+    except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+        print(f"Nie można połączyć się z Ollama pod adresem {args.host}: {exc}", file=sys.stderr)
+        print("Sprawdź, czy działa `ollama serve` i czy host jest poprawny.", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as exc:
+        print(f"Odpowiedź Ollama nie jest poprawnym JSON-em: {exc}", file=sys.stderr)
         return 1
 
-    model_device = model.device
-    float_dtype = torch.bfloat16 if model_device.type == "cuda" else torch.float32
-    inputs = _move_inputs_to_device(inputs, model_device, float_dtype)
+    translated = (data.get("message") or {}).get("content", "").strip()
+    if not translated:
+        print("Ollama zwróciła pustą odpowiedź.", file=sys.stderr)
+        print(f"Pełna odpowiedź: {json.dumps(data, ensure_ascii=False)}", file=sys.stderr)
+        return 1
 
-    input_len = inputs["input_ids"].shape[-1]
-    with torch.inference_mode():
-        output = model.generate(
-            **inputs,
-            do_sample=False,
-            max_new_tokens=args.max_new_tokens,
-        )
-
-    translated = processor.decode(output[0][input_len:], skip_special_tokens=True).strip()
     print(translated)
     return 0
 

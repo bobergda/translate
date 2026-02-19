@@ -5,6 +5,14 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="${PROJECT_DIR}/test_translategemma_4b.py"
 DOWNLOAD_SCRIPT="${PROJECT_DIR}/download_required_files.sh"
 REQUIREMENTS_PATH="${PROJECT_DIR}/requirements.txt"
+VENV_DIR="${PROJECT_DIR}/.venv"
+VENV_PYTHON="${VENV_DIR}/bin/python3"
+
+ensure_venv() {
+  if [[ ! -d "${VENV_DIR}" ]]; then
+    python3 -m venv "${VENV_DIR}"
+  fi
+}
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 nie jest dostępny w PATH" >&2
@@ -20,10 +28,10 @@ Użycie:
   ./start.sh [ARGUMENTY_DLA_PYTHONA...]
 
 Opis:
-  install  - instaluje zależności z requirements.txt
-  download - pobiera pliki modelu przez download_required_files.sh
-  run      - uruchamia test_translategemma_4b.py
-  bez komendy - też uruchamia test_translategemma_4b.py
+  install  - tworzy .venv i instaluje zależności z requirements.txt
+  download - pobiera model przez ollama pull (przez download_required_files.sh)
+  run      - uruchamia test_translategemma_4b.py przez .venv
+  bez komendy - też uruchamia test_translategemma_4b.py przez .venv
 EOF
 }
 
@@ -31,7 +39,9 @@ command="${1:-run}"
 
 case "${command}" in
   install)
-    python3 -m pip install -r "${REQUIREMENTS_PATH}"
+    ensure_venv
+    "${VENV_PYTHON}" -m pip install --upgrade pip
+    "${VENV_PYTHON}" -m pip install -r "${REQUIREMENTS_PATH}"
     ;;
   download)
     shift || true
@@ -39,12 +49,14 @@ case "${command}" in
     ;;
   run)
     shift || true
-    python3 "${SCRIPT_PATH}" "${@}"
+    ensure_venv
+    "${VENV_PYTHON}" "${SCRIPT_PATH}" "${@}"
     ;;
   -h|--help|help)
     usage
     ;;
   *)
-    python3 "${SCRIPT_PATH}" "${@}"
+    ensure_venv
+    "${VENV_PYTHON}" "${SCRIPT_PATH}" "${@}"
     ;;
 esac

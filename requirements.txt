@@ -1,5 +1,2 @@
-torch
-transformers>=4.57.0
-accelerate
-sentencepiece
-huggingface-hub
+# Brak obowiązkowych zależności pip.
+# Skrypt korzysta z wbudowanego urllib oraz lokalnego serwera Ollama.
