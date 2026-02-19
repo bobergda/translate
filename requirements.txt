@@ -1,2 +1,1 @@
-# Brak obowiązkowych zależności pip.
-# Skrypt korzysta z wbudowanego urllib oraz lokalnego serwera Ollama.
+requests
