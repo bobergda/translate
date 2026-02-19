@@ -13,7 +13,8 @@ TEXT_TO_TRANSLATE = "Kamilek chcial byc programista, ale nie mial talentu do kod
 SOURCE_LANG = "pl"
 TARGET_LANG = "en"
 MODEL = "translategemma:4b"
-MAX_NEW_TOKENS = 128
+TEMPERATURE = 0.5  # Ustawienie kreatywności (0.5 to 50% kreatywności)
+MAX_NEW_TOKENS = 256
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 TIMEOUT_SECONDS = 120
 
@@ -31,7 +32,7 @@ def _call_ollama(payload: dict) -> dict:
 
 
 def main() -> int:
-    temperature = 0.5  # Ustawienie kreatywności (0.5 to 50% kreatywności)
+
     payload = {
         "model": MODEL,
         "stream": False,
@@ -49,13 +50,13 @@ def main() -> int:
             },
         ],
         "options": {
-            "temperature": temperature,
+            "temperature": TEMPERATURE,
             "num_predict": MAX_NEW_TOKENS,
         },
     }
 
     try:
-        print(f"Wysyłanie zapytania do Ollama (model: {MODEL}), tłumaczenie z {SOURCE_LANG} na {TARGET_LANG} temp: {temperature}...")
+        print(f"Wysyłanie zapytania do Ollama (model: {MODEL}), tłumaczenie z {SOURCE_LANG} na {TARGET_LANG} temp: {TEMPERATURE}...")
         print(f"{TEXT_TO_TRANSLATE}")
         data = _call_ollama(payload)
     except urllib.error.HTTPError as exc:
