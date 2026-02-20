@@ -1,45 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODEL_URL="${MODEL_URL:-}"
-OUTPUT_PATH="${1:-$HOME/Downloads/TranslateGemma-4B-IT.mlpackage}"
+DEFAULT_MLX_REPO_URL="https://huggingface.co/mlx-community/translategemma-4b-it-4bit"
+DEFAULT_MLX_RESOLVE_BASE="https://huggingface.co/mlx-community/translategemma-4b-it-4bit/resolve/main"
+
+MODEL_URL="${MODEL_URL:-$DEFAULT_MLX_REPO_URL}"
 TOKEN="${HF_TOKEN:-${HUGGINGFACE_TOKEN:-}}"
+USER_OUTPUT="${1:-}"
 
-if [[ -z "${MODEL_URL}" ]]; then
-  cat <<'MSG'
-Brak MODEL_URL.
+hf_curl_download() {
+  local source_url="$1"
+  local destination_path="$2"
 
-Ten skrypt pobiera gotowy artifact Core ML dla TranslateGemma 4B.
-Model musi byc juz wyeksportowany do Core ML (.mlpackage/.mlmodel/.mlmodelc).
+  local -a curl_args=(--location --fail --progress-bar "$source_url" --output "$destination_path")
+  if [[ -n "${TOKEN}" ]]; then
+    curl_args=(--header "Authorization: Bearer ${TOKEN}" "${curl_args[@]}")
+  fi
 
-Przyklad:
-  MODEL_URL="https://example.com/TranslateGemma-4B-IT.mlpackage.zip" \
-  ./download_translategemma_4b_coreml.sh
-
-Opcjonalnie:
-  HF_TOKEN="hf_..." MODEL_URL="https://..." ./download_translategemma_4b_coreml.sh
-MSG
-  exit 1
-fi
-
-tmp_dir="$(mktemp -d)"
-cleanup() {
-  rm -rf "${tmp_dir}"
+  curl "${curl_args[@]}"
 }
-trap cleanup EXIT
-
-archive_path="${tmp_dir}/model.download"
-
-echo "Pobieram TranslateGemma 4B Core ML:"
-echo "  ${MODEL_URL}"
-
-curl_args=(--location --fail --progress-bar "${MODEL_URL}" --output "${archive_path}")
-if [[ -n "${TOKEN}" ]]; then
-  curl_args=(--header "Authorization: Bearer ${TOKEN}" "${curl_args[@]}")
-fi
-curl "${curl_args[@]}"
-
-mkdir -p "$(dirname "${OUTPUT_PATH}")"
 
 resolve_destination() {
   local requested="$1"
@@ -54,6 +33,75 @@ resolve_destination() {
       ;;
   esac
 }
+
+is_mlx_source_url() {
+  case "${MODEL_URL}" in
+    "${DEFAULT_MLX_REPO_URL}"|"${DEFAULT_MLX_REPO_URL}/"|"${DEFAULT_MLX_RESOLVE_BASE}"|"${DEFAULT_MLX_RESOLVE_BASE}/"*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+download_mlx_snapshot() {
+  local output_dir="$1"
+
+  mkdir -p "${output_dir}"
+
+  local files=(
+    README.md
+    added_tokens.json
+    chat_template.jinja
+    config.json
+    generation_config.json
+    model.safetensors
+    model.safetensors.index.json
+    special_tokens_map.json
+    tokenizer.json
+    tokenizer.model
+    tokenizer_config.json
+  )
+
+  echo "Pobieram gotowy model TranslateGemma 4B (MLX):"
+  echo "  ${DEFAULT_MLX_REPO_URL}"
+  echo "Katalog docelowy: ${output_dir}"
+
+  for file in "${files[@]}"; do
+    local source_url="${DEFAULT_MLX_RESOLVE_BASE}/${file}?download=true"
+    local target_path="${output_dir}/${file}"
+    echo "- ${file}"
+    hf_curl_download "${source_url}" "${target_path}"
+  done
+
+  echo "OK: pobrano pliki MLX do ${output_dir}"
+  echo "UWAGA: to jest model MLX (safetensors), nie Core ML (.mlpackage)."
+  echo "Ta appka Core ML go bezposrednio nie zaladuje."
+}
+
+if is_mlx_source_url; then
+  OUTPUT_DIR="${USER_OUTPUT:-$HOME/Downloads/translategemma-4b-it-4bit-mlx}"
+  download_mlx_snapshot "${OUTPUT_DIR}"
+  exit 0
+fi
+
+OUTPUT_PATH="${USER_OUTPUT:-$HOME/Downloads/TranslateGemma-4B-IT.mlpackage}"
+
+tmp_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf "${tmp_dir}"
+}
+trap cleanup EXIT
+
+archive_path="${tmp_dir}/model.download"
+
+echo "Pobieram artefakt Core ML z URL:"
+echo "  ${MODEL_URL}"
+
+hf_curl_download "${MODEL_URL}" "${archive_path}"
+
+mkdir -p "$(dirname "${OUTPUT_PATH}")"
 
 if unzip -tqq "${archive_path}" >/dev/null 2>&1; then
   unpack_dir="${tmp_dir}/unpacked"
