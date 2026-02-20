@@ -46,7 +46,7 @@ jobs:
           set -euxo pipefail
           xcodebuild \
             -project LocalTranslatorMac.xcodeproj \
-            -target LocalTranslatorMac \
+            -scheme LocalTranslatorMac \
             -configuration Release \
             -destination "platform=macOS" \
             -derivedDataPath build/DerivedData \
