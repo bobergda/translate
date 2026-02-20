@@ -3,3 +3,6 @@ __pycache__/
 models/
 venv/
 .venv/
+apple_local_translator/build/
+apple_local_translator/build-apple/
+apple_local_translator/LocalTranslatorMac.xcodeproj/

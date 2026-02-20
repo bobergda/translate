@@ -45,7 +45,21 @@ import llama
 3. Podmien domyslne pliki na te z katalogu `SwiftUIApp/`.
 4. Zbuduj i uruchom.
 
-## 4) Import modelu w appce
+## 4) CI: build appki macOS w GitHub Actions
+
+W repo jest workflow:
+- `.github/workflows/macos-app-build.yml`
+
+Co robi pipeline:
+1. Stawia runner `macos`.
+2. Buduje `llama.xcframework` z `llama.cpp`.
+3. Generuje projekt z `apple_local_translator/project.yml` przez `xcodegen`.
+4. Buduje `LocalTranslatorMac.app` przez `xcodebuild`.
+5. Wrzuca artifact `LocalTranslatorMac-app` (zip z `.app`).
+
+Mozesz odpalic recznie przez `workflow_dispatch` albo automatycznie przez push/PR.
+
+## 5) Import modelu w appce
 
 Po starcie appki kliknij:
 - `Importuj GGUF` i wybierz pobrany plik,

@@ -1,0 +1,70 @@
+name: Build macOS App
+
+on:
+  push:
+    paths:
+      - apple_local_translator/**
+      - .github/workflows/macos-app-build.yml
+  pull_request:
+    paths:
+      - apple_local_translator/**
+      - .github/workflows/macos-app-build.yml
+  workflow_dispatch:
+
+jobs:
+  build-macos-app:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build llama.xcframework
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /tmp/llama.cpp
+          pushd /tmp/llama.cpp
+          ./build-xcframework.sh
+          popd
+
+          mkdir -p apple_local_translator/build-apple
+          cp -R /tmp/llama.cpp/build-apple/llama.xcframework apple_local_translator/build-apple/
+
+      - name: Generate Xcode project
+        working-directory: apple_local_translator
+        run: |
+          set -euxo pipefail
+          xcodegen generate
+
+      - name: Build macOS app
+        working-directory: apple_local_translator
+        run: |
+          set -euxo pipefail
+          xcodebuild \
+            -project LocalTranslatorMac.xcodeproj \
+            -target LocalTranslatorMac \
+            -configuration Release \
+            -destination "platform=macOS" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package app artifact
+        working-directory: apple_local_translator
+        run: |
+          set -euxo pipefail
+          cd build/DerivedData/Build/Products/Release
+          zip -r LocalTranslatorMac.app.zip LocalTranslatorMac.app
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LocalTranslatorMac-app
+          path: apple_local_translator/build/DerivedData/Build/Products/Release/LocalTranslatorMac.app.zip
+          if-no-files-found: error
+          retention-days: 7
