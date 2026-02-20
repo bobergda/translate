@@ -28,13 +28,13 @@ xcodegen generate
 2. Otworz `LocalTranslatorCoreMLMac.xcodeproj` w Xcode.
 3. Zbuduj i uruchom target `LocalTranslatorCoreMLMac`.
 
-## TranslateGemma 4B (pod konwersje do Core ML)
+## TranslateGemma 4B (download + konwersja do Core ML)
 
-Skrypt pomocniczy pod `TranslateGemma 4B`:
+### 1) Pobierz checkpoint HF (format konwertowalny)
 
 ```bash
 cd apple_local_translator_coreml
-./download_translategemma_4b_coreml.sh
+./download_translategemma_4b_hf_checkpoint.sh
 ```
 
 Skrypt ma zaszyty model:
@@ -47,6 +47,24 @@ Uwaga:
 - skrypt pobiera checkpoint `Transformers/safetensors`,
 - appka z tego katalogu wymaga artefaktu `Core ML` (`.mlpackage/.mlmodel/.mlmodelc`),
 - pobrany format jest baza do konwersji na Core ML.
+
+### 2) Konwersja na Core ML
+
+```bash
+cd apple_local_translator_coreml
+./convert_translategemma_4b_to_coreml.sh
+```
+
+Domyslny output:
+- `~/Downloads/translategemma-4b-it-coreml/Model.mlpackage`
+
+Jesli chcesz podac inne sciezki:
+
+```bash
+./convert_translategemma_4b_to_coreml.sh \
+  ~/Downloads/translategemma-4b-it-hf \
+  ~/Downloads/translategemma-4b-it-coreml/Model.mlpackage
+```
 
 ## Uzycie
 
