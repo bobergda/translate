@@ -28,6 +28,25 @@ xcodegen generate
 2. Otworz `LocalTranslatorCoreMLMac.xcodeproj` w Xcode.
 3. Zbuduj i uruchom target `LocalTranslatorCoreMLMac`.
 
+## TranslateGemma 4B (Core ML)
+
+Skrypt pomocniczy pod `TranslateGemma 4B`:
+
+```bash
+cd apple_local_translator_coreml
+MODEL_URL="https://twoj-adres/TranslateGemma-4B-IT.mlpackage.zip" \
+./download_translategemma_4b_coreml.sh
+```
+
+Domyslnie model zapisze sie jako:
+- `~/Downloads/TranslateGemma-4B-IT.mlpackage`
+
+Nastepnie wybierz go w appce przez `Importuj model Core ML`.
+
+Uwaga:
+- skrypt oczekuje gotowego artefaktu Core ML (`.mlpackage/.mlmodel/.mlmodelc`),
+- oficjalny `google/translategemma-4b-it` nie jest sam w sobie artefaktem Core ML.
+
 ## Uzycie
 
 1. Kliknij `Importuj model Core ML` i wybierz model.
