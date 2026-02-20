@@ -5,6 +5,9 @@ Ten folder zawiera kod "podobny" do Twojego `test_translategemma_4b.py`, ale prz
 - jeden kod UI dla iPhone i macOS,
 - model GGUF zoptymalizowany pod mobile (`Q4_K_M`).
 
+Jesli chcesz wariant stricte `Core ML` pod macOS (z preferencja ANE), sprawdz:
+- `../apple_local_translator_coreml/README.md`
+
 ## Co jest w srodku
 
 - `SwiftUIApp/LibLlama.swift` - lokalny inference przez `llama.cpp`.

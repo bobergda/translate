@@ -1,0 +1,22 @@
+name: LocalTranslatorCoreMLMac
+options:
+  minimumXcodeGenVersion: 2.39.0
+
+targets:
+  LocalTranslatorCoreMLMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: SwiftUIApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.localtranslator.coreml.mac
+        PRODUCT_NAME: LocalTranslatorCoreMLMac
+        SWIFT_VERSION: 5.9
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""

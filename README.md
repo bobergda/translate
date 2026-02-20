@@ -1,9 +1,10 @@
 # translate
 
-Repo zawiera dwie wersje lokalnego tłumacza:
+Repo zawiera trzy wersje lokalnego tlumacza:
 
-- wersję Python + Ollama (obecne skrypty w katalogu głównym),
-- wersję Apple (iPhone + macOS) opartą o `SwiftUI` + `llama.cpp`.
+- wersje Python + Ollama (obecne skrypty w katalogu glownym),
+- wersje Apple (iPhone + macOS) oparta o `SwiftUI` + `llama.cpp`,
+- druga wersje Apple (macOS) oparta o `SwiftUI` + `Core ML` + ANE.
 
 ## Start (Python + Ollama)
 
@@ -13,10 +14,16 @@ Repo zawiera dwie wersje lokalnego tłumacza:
 ./start.sh run
 ```
 
-## Wersja Apple (iPhone + macOS)
+## Wersja Apple (iPhone + macOS, `llama.cpp`)
 
 Pełny opis, model i kroki uruchomienia znajdziesz tutaj:
 
 - `apple_local_translator/README.md`
 
 To jest główny punkt wejścia, jeśli chcesz lokalne odpalanie modelu na iPhonie lub macOS.
+
+## Wersja Apple Core ML (macOS + ANE)
+
+Osobna appka macOS pod modele `Core ML` znajdziesz tutaj:
+
+- `apple_local_translator_coreml/README.md`
