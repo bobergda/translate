@@ -28,7 +28,7 @@ xcodegen generate
 2. Otworz `LocalTranslatorCoreMLMac.xcodeproj` w Xcode.
 3. Zbuduj i uruchom target `LocalTranslatorCoreMLMac`.
 
-## TranslateGemma 4B (link zaszyty)
+## TranslateGemma 4B (pod konwersje do Core ML)
 
 Skrypt pomocniczy pod `TranslateGemma 4B`:
 
@@ -38,15 +38,15 @@ cd apple_local_translator_coreml
 ```
 
 Skrypt ma zaszyty model:
-- `https://huggingface.co/mlx-community/translategemma-4b-it-4bit`
+- `https://huggingface.co/google/translategemma-4b-it`
 
 Domyslnie pobierze pliki do:
-- `~/Downloads/translategemma-4b-it-4bit-mlx`
+- `~/Downloads/translategemma-4b-it-hf`
 
 Uwaga:
-- to gotowy model `MLX` (`safetensors`), nie `Core ML`,
+- skrypt pobiera checkpoint `Transformers/safetensors`,
 - appka z tego katalogu wymaga artefaktu `Core ML` (`.mlpackage/.mlmodel/.mlmodelc`),
-- jesli masz bezposredni URL do gotowego artefaktu Core ML, podaj go przez `MODEL_URL=...`.
+- pobrany format jest baza do konwersji na Core ML.
 
 ## Uzycie
 
