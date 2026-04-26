@@ -6,3 +6,4 @@ venv/
 apple_local_translator/build/
 apple_local_translator/build-apple/
 apple_local_translator/LocalTranslatorMac.xcodeproj/
+.DS_Store
